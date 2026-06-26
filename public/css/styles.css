@@ -1,0 +1,351 @@
+:root {
+  --bg:           #0d0d0d;
+  --surface:      #1c1c1e;
+  --border:       #2c2c2e;
+  --text:         #f0f0f0;
+  --text-muted:   #8e8e93;
+  --accent:       #3b82f6;
+  --accent-hover: #60a5fa;
+  --radius-card:  14px;
+  --radius-thumb: 8px;
+  --ease:         cubic-bezier(0.4, 0, 0.2, 1);
+  --duration:     0.22s;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: system-ui, -apple-system, sans-serif;
+  min-height: 100vh;
+}
+
+/* ─── Page background ────────────────────────────────────────────────────── */
+
+#page-bg {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+
+#page-bg::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+}
+
+/* ─── Header ─────────────────────────────────────────────────────────────── */
+
+.site-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 2rem;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  border-bottom: 1px solid var(--border);
+}
+
+.site-logo {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.02em;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+#breadcrumb {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  font-size: 0.875rem;
+  color: var(--text-muted);
+}
+
+.breadcrumb-link {
+  color: var(--accent);
+  cursor: pointer;
+}
+
+.breadcrumb-link:hover {
+  color: var(--accent-hover);
+}
+
+.breadcrumb-sep {
+  color: var(--text-muted);
+  margin: 0 0.25rem;
+}
+
+.breadcrumb-sep::before {
+  content: '/';
+}
+
+/* ─── Main content area ───────────────────────────────────────────────────── */
+
+#app {
+  padding: 2rem;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.page-title {
+  font-size: clamp(1.5rem, 4vw, 2.5rem);
+  font-weight: 700;
+  margin-bottom: 1.5rem;
+  letter-spacing: -0.02em;
+}
+
+/* ─── Card grid (vacations & excursions) ─────────────────────────────────── */
+
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1.5rem;
+}
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-card);
+  overflow: hidden;
+  cursor: pointer;
+  display: block;
+  transition: transform var(--duration) var(--ease),
+              box-shadow var(--duration) var(--ease);
+}
+
+.card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
+}
+
+.card-cover {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  background: var(--border);
+  display: block;
+}
+
+.card-info {
+  padding: 1rem;
+}
+
+.card-name {
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+}
+
+.card-meta {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+/* ─── Photo thumbnail grid ───────────────────────────────────────────────── */
+
+.photo-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 6px;
+}
+
+.photo-thumb {
+  aspect-ratio: 1;
+  object-fit: cover;
+  width: 100%;
+  border-radius: var(--radius-thumb);
+  cursor: pointer;
+  display: block;
+  transition: opacity var(--duration) var(--ease),
+              transform var(--duration) var(--ease);
+}
+
+.photo-thumb:hover {
+  opacity: 0.82;
+  transform: scale(1.03);
+}
+
+/* ─── Lightbox ───────────────────────────────────────────────────────────── */
+
+#lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(0, 0, 0, 0.92);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#lightbox[hidden] {
+  display: none;
+}
+
+#lb-stage {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  padding: 4rem 5rem;
+}
+
+#lb-img {
+  width: 100%;
+  height: 100%;
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center;
+  transition: opacity 0.15s ease;
+}
+
+#lb-prev,
+#lb-next {
+  position: fixed;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(255, 255, 255, 0.08);
+  border: none;
+  color: white;
+  font-size: 2.5rem;
+  line-height: 1;
+  padding: 0.5rem 1rem;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: background var(--duration) var(--ease);
+  z-index: 10001;
+}
+
+#lb-prev { left: 0.75rem; }
+#lb-next { right: 0.75rem; }
+
+#lb-prev:hover,
+#lb-next:hover {
+  background: rgba(255, 255, 255, 0.18);
+}
+
+#lb-close {
+  position: fixed;
+  top: 0.75rem;
+  right: 0.75rem;
+  background: rgba(255, 255, 255, 0.08);
+  border: none;
+  color: white;
+  font-size: 1.75rem;
+  line-height: 1;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background var(--duration) var(--ease);
+  z-index: 10001;
+}
+
+#lb-close:hover {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+#lb-counter {
+  position: fixed;
+  bottom: 1rem;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.875rem;
+  color: rgba(255, 255, 255, 0.55);
+  z-index: 10001;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+/* ─── Loading / states ───────────────────────────────────────────────────── */
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  margin: 4rem auto;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.error-state,
+.empty-state {
+  text-align: center;
+  padding: 4rem 2rem;
+  color: var(--text-muted);
+}
+
+.error-state h2 {
+  margin-bottom: 0.5rem;
+  color: var(--text);
+}
+
+.error-state a,
+.empty-state a {
+  color: var(--accent);
+}
+
+.empty-state code {
+  background: var(--surface);
+  padding: 0.1em 0.4em;
+  border-radius: 4px;
+  font-size: 0.9em;
+}
+
+/* ─── Responsive ─────────────────────────────────────────────────────────── */
+
+@media (max-width: 640px) {
+  #app {
+    padding: 1rem;
+  }
+
+  .site-header {
+    padding: 0.75rem 1rem;
+  }
+
+  .card-grid {
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 0.75rem;
+  }
+
+  .photo-grid {
+    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    gap: 4px;
+  }
+
+  #lb-stage {
+    padding: 3rem 3.5rem;
+  }
+
+  #lb-prev,
+  #lb-next {
+    font-size: 2rem;
+    padding: 0.4rem 0.75rem;
+  }
+}
