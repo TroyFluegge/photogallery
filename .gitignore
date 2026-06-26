@@ -1,0 +1,7 @@
+node_modules/
+photos/
+.DS_Store
+.env
+.env.local
+.env.*.local
+*.pem
