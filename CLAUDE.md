@@ -4,6 +4,12 @@ This file gives Claude Code a complete picture of the project so future sessions
 
 ---
 
+## Mandates
+
+- **Never commit or push** unless the user explicitly asks.
+
+---
+
 ## What this is
 
 A self-hosted photo gallery website built with Node.js + Express on the backend and vanilla HTML/CSS/JS on the frontend. No build step, no framework, no database. Content is managed entirely through the filesystem.
