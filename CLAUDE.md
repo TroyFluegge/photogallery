@@ -261,4 +261,5 @@ Default port: `3000`. Override: `PORT=8080 npm start`.
 
 ### 2026-06-26 — Mobile lightbox full-screen
 - `#lb-stage` padding reduced to `0` on mobile (`max-width: 640px`) so the photo fills the full viewport
+- Additional `@media (max-height: 500px)` rule removes stage padding in landscape orientation (phone in landscape exceeds 640px width and would otherwise fall back to desktop padding, leaving little room on a ~390px-tall screen)
 - All lightbox controls (`close`, `prev`, `next`, `counter`) are `position: fixed` and overlay the image, so no stage padding is needed to clear them

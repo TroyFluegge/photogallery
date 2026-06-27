@@ -412,3 +412,9 @@ body.home-hero .site-header {
     padding: 0.4rem 0.75rem;
   }
 }
+
+@media (max-height: 500px) {
+  #lb-stage {
+    padding: 0;
+  }
+}
