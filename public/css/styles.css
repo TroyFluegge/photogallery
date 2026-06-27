@@ -10,6 +10,7 @@
   --radius-thumb: 8px;
   --ease:         cubic-bezier(0.4, 0, 0.2, 1);
   --duration:     0.22s;
+  --header-h:     62px;
 }
 
 *, *::before, *::after {
@@ -45,7 +46,55 @@ body {
   background: rgba(0, 0, 0, 0.6);
 }
 
+/* ─── Hero section (home page) ───────────────────────────────────────────── */
+
+.hero-section {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 2rem;
+  position: relative;
+}
+
+.hero-clickable {
+  cursor: pointer;
+}
+
+.hero-title {
+  font-size: clamp(2.5rem, 7vw, 5rem);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+  margin-bottom: 1rem;
+  text-shadow: 0 2px 20px rgba(0, 0, 0, 0.5);
+}
+
+.hero-subtitle {
+  font-size: clamp(1rem, 2.5vw, 1.4rem);
+  color: rgba(255, 255, 255, 0.82);
+  font-weight: 400;
+  text-shadow: 0 1px 10px rgba(0, 0, 0, 0.5);
+}
+
+/* Sub-pages keep the header visible, so hero fills remaining viewport */
+.hero-section.sub-hero {
+  height: calc(100vh - var(--header-h));
+}
+
+.gallery-section {
+  padding: 2.5rem 2rem 3rem;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
 /* ─── Header ─────────────────────────────────────────────────────────────── */
+
+body.home-hero .site-header {
+  display: none;
+}
 
 .site-header {
   display: flex;
@@ -105,6 +154,12 @@ body {
   margin: 0 auto;
 }
 
+#app.home-page {
+  padding: 0;
+  max-width: none;
+  margin: 0;
+}
+
 .page-title {
   font-size: clamp(1.5rem, 4vw, 2.5rem);
   font-weight: 700;
@@ -112,7 +167,7 @@ body {
   letter-spacing: -0.02em;
 }
 
-/* ─── Card grid (vacations & excursions) ─────────────────────────────────── */
+/* ─── Card grid (albums & galleries) ────────────────────────────────────── */
 
 .card-grid {
   display: grid;
@@ -148,6 +203,10 @@ body {
   padding: 1rem;
 }
 
+.card--no-cover .card-info {
+  padding: 2rem 1.25rem;
+}
+
 .card-name {
   font-size: 1.05rem;
   font-weight: 600;
@@ -163,12 +222,12 @@ body {
 
 .photo-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(234px, 1fr));
   gap: 6px;
 }
 
 .photo-thumb {
-  aspect-ratio: 1;
+  aspect-ratio: 4 / 3;
   object-fit: cover;
   width: 100%;
   border-radius: var(--radius-thumb);
@@ -321,6 +380,10 @@ body {
 /* ─── Responsive ─────────────────────────────────────────────────────────── */
 
 @media (max-width: 640px) {
+  :root {
+    --header-h: 54px;
+  }
+
   #app {
     padding: 1rem;
   }
@@ -335,7 +398,7 @@ body {
   }
 
   .photo-grid {
-    grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
     gap: 4px;
   }
 
