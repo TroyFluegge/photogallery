@@ -78,11 +78,14 @@ app.get('/api/albums', (_req, res) => {
   const albums = getSubdirs(PHOTOS_ROOT).map(id => {
     const dir  = path.join(PHOTOS_ROOT, id);
     const meta = readMeta(dir);
+    const directImage = getImages(dir)[0];
     const coverPhoto = meta.coverPhoto === false
       ? false
       : meta.coverPhoto
         ? `/content/${id}/${meta.coverPhoto}`
-        : findAlbumCover(dir, id);
+        : directImage
+          ? `/content/${id}/${directImage}`
+          : findAlbumCover(dir, id);
     return {
       id,
       name:         meta.name || slugToNameWithoutYear(id),
