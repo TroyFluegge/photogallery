@@ -1,6 +1,6 @@
 # Photo Gallery
 
-A self-hosted vacation photo gallery. Navigate from a home page through vacation destinations down to individual excursions, where photos are displayed in a grid with a full-screen lightbox viewer. New content is added by dropping folders and images onto the filesystem — no code changes or server restarts required.
+A self-hosted photo gallery. Navigate from a home page through albums down to individual galleries, where photos are displayed in a grid with a full-screen lightbox viewer. New content is added by dropping folders and images onto the filesystem — no code changes or server restarts required.
 
 ---
 
@@ -16,7 +16,7 @@ A self-hosted vacation photo gallery. Navigate from a home page through vacation
   - [Display Order](#display-order)
   - [Cover Photos](#cover-photos)
   - [Background Images](#background-images)
-  - [Custom Display Names and Overrides (meta.json)](#custom-display-names-and-overrides-metajson)
+  - [Custom Names and Overrides (meta.json)](#custom-display-names-and-overrides-metajson)
 - [Navigation](#navigation)
 - [Lightbox Controls](#lightbox-controls)
 - [Configuration](#configuration)
@@ -76,48 +76,54 @@ PORT=8080 npm start
 
 ### Folder Structure
 
-All photos live under `photos/vacations/`. Each vacation is a subfolder; each excursion is a subfolder inside the vacation. Photos go directly inside excursion folders.
+All photos live under `content/`. Each album is a subfolder. Inside an album, you can either use **gallery subfolders** (two levels) or drop **photos directly** (one level) — whichever fits your content.
+
+**Two-level layout** — album contains gallery folders:
 
 ```
-photos/
-└── vacations/
-    ├── costa-rica-2023/
-    │   ├── meta.json              ← optional, see below
-    │   ├── snorkeling/
-    │   │   ├── meta.json          ← optional
-    │   │   ├── IMG_001.jpg
-    │   │   ├── IMG_002.jpg
-    │   │   └── IMG_003.jpg
-    │   └── zip-lining/
-    │       ├── action-shot.jpg
-    │       └── group-photo.png
+content/
+    └── costa-rica-2023/
+        ├── meta.json              ← optional, see below
+        ├── snorkeling/
+        │   ├── meta.json          ← optional
+        │   ├── IMG_001.jpg
+        │   └── IMG_002.jpg
+        └── zip-lining/
+            └── action-shot.jpg
+```
+
+**One-level layout** — album contains photos directly:
+
+```
+content/
     └── italy-2025/
-        ├── rome/
-        │   └── colosseum.jpg
-        └── amalfi-coast/
-            └── sunset.webp
+        ├── meta.json              ← optional
+        ├── colosseum.jpg
+        └── sunset.webp
 ```
 
-**Adding a new vacation** — create a folder and add at least one excursion subfolder with photos:
+When photos are placed directly in an album folder (no subfolders), the photo grid opens immediately when you click that album — no gallery step.
+
+**Adding a new album** — create a folder and add photos or gallery subfolders:
 
 ```bash
-mkdir -p photos/vacations/japan-2026/tokyo-day-1
+mkdir -p content/japan-2026/tokyo-day-1
 # copy photos into that folder
 ```
 
-Refresh the browser. The new vacation appears on the home page immediately — no server restart needed.
+Refresh the browser. The new album appears on the home page immediately — no server restart needed.
 
-**Adding a new excursion to an existing vacation:**
+**Adding a new gallery to an existing album:**
 
 ```bash
-mkdir photos/vacations/costa-rica-2023/waterfall-hike
+mkdir content/costa-rica-2023/waterfall-hike
 # copy photos in
 ```
 
-**Adding more photos to an existing excursion:**
+**Adding more photos to an existing gallery:**
 
 ```bash
-cp ~/Downloads/new-photos/*.jpg photos/vacations/costa-rica-2023/snorkeling/
+cp ~/Downloads/new-photos/*.jpg content/costa-rica-2023/snorkeling/
 ```
 
 Again, just refresh — the server reads the filesystem on every request.
@@ -140,7 +146,7 @@ For names that need custom capitalization (e.g., `USA`, `NYC`) or a completely d
 **Recommendations:**
 - Use lowercase letters, numbers, and hyphens only
 - Avoid spaces, underscores, apostrophes, or special characters in folder names
-- Use a year suffix on vacation folders to distinguish repeat destinations: `paris-2019`, `paris-2024`
+- Use a year suffix on album folders to distinguish repeat destinations: `paris-2019`, `paris-2024`
 
 ---
 
@@ -164,7 +170,7 @@ Files with any other extension (`.raw`, `.heic`, `.mov`, `.txt`, etc.) are ignor
 
 ### Display Order
 
-Within any excursion, photos are displayed in **alphabetical order by filename**. The simplest way to control order is to prefix filenames with a number:
+Within any gallery, photos are displayed in **alphabetical order by filename**. The simplest way to control order is to prefix filenames with a number:
 
 ```
 01-arrival.jpg
@@ -179,10 +185,10 @@ Camera-generated names like `IMG_4521.jpg` sort correctly as long as the numberi
 2023-03-15-10-45-sea-turtle.jpg
 ```
 
-Vacations and excursions are also listed in **alphabetical order by folder name**. Prefix folder names with a number or date to control the order on the home and vacation pages:
+Albums and galleries are also listed in **alphabetical order by folder name**. Prefix folder names with a number or date to control the order on the home and album pages:
 
 ```
-photos/vacations/
+content/
 ├── 01-costa-rica-2023/
 └── 02-italy-2025/
 ```
@@ -191,7 +197,7 @@ photos/vacations/
 
 ### Cover Photos
 
-The image shown on vacation and excursion cards is chosen automatically: the **first alphabetical image file** in the folder. For excursion cards, this is the first photo in that excursion's folder. For vacation cards, the server walks excursion subfolders (alphabetically) and uses the first photo it finds.
+The image shown on album and gallery cards is chosen automatically: the **first alphabetical image file** in the folder. For gallery cards, this is the first photo in that gallery's folder. For album cards, the server walks gallery subfolders (alphabetically) and uses the first photo it finds.
 
 To set a specific cover photo, use `meta.json` — see below.
 
@@ -205,9 +211,9 @@ The background at each level is chosen automatically — no configuration requir
 
 | Level | Automatic fallback |
 |---|---|
-| Home page | First photo found anywhere in `photos/vacations/` |
-| Vacation page | First photo found in any excursion of that vacation |
-| Excursion page | First photo in that excursion |
+| Home page | First photo found anywhere in `content/` |
+| Album page | First photo found in any gallery of that album |
+| Gallery page | First photo in that gallery |
 
 To use a specific image instead of the automatic one, set `backgroundImage` in `meta.json` — see below.
 
@@ -215,67 +221,87 @@ To use a specific image instead of the automatic one, set `backgroundImage` in `
 
 ### Custom Display Names and Overrides (meta.json)
 
-Place an optional `meta.json` file inside any folder to override the automatic display name, cover photo, and/or background image. All fields are optional — omit any you don't need.
+Place an optional `meta.json` file inside any folder to override defaults. All fields are optional — omit any you don't need. Missing or malformed files are silently ignored and the automatic defaults apply.
 
-**Schema:**
+---
+
+#### Home page — `content/meta.json`
+
+Controls the full-screen hero shown when the site first loads.
+
+| Field | Default if omitted |
+|---|---|
+| `title` | `"Title"` |
+| `subtitle` | `"Description"` |
+| `backgroundImage` | First photo found anywhere in the content folder |
+
+The `backgroundImage` value is a path **relative to the `content/` directory**, since the home page has no photos of its own.
 
 ```json
 {
-  "name": "Human-readable display name",
-  "coverPhoto": "filename-in-this-folder.jpg",
-  "backgroundImage": "filename-in-this-folder.jpg"
+  "title": "Our Family Travels",
+  "subtitle": "Making memories around the world",
+  "backgroundImage": "costa-rica-2023/snorkeling/coral-reef-wide.jpg"
 }
 ```
 
-**Example — vacation folder:**
+---
 
-```
-photos/vacations/cr-2023/meta.json
-```
+#### Album folders — `content/{album}/meta.json`
+
+Controls the hero and card shown for each album.
+
+| Field | Default if omitted |
+|---|---|
+| `name` | Folder name with hyphens → spaces, title-cased, **year removed** |
+| `description` | Year extracted from the folder name |
+| `year` | Year extracted from the folder name |
+| `coverPhoto` | First photo found in any gallery of this album; set to `false` to show no cover image |
+| `backgroundImage` | First photo found in any gallery of this album |
+
+The year is automatically read from the folder name (e.g. `costa-rica-2023` → `2023`) and shown as the second line on the hero and card. Set `description` to replace it with custom text.
 
 ```json
 {
-  "name": "Costa Rica 2023",
+  "name": "Costa Rica",
+  "description": "Two weeks of pure adventure",
+  "year": 2023,
   "coverPhoto": "beach-sunset.jpg",
   "backgroundImage": "jungle-canopy.jpg"
 }
 ```
 
-**Example — excursion folder:**
+---
 
-```
-photos/vacations/cr-2023/snorkeling/meta.json
-```
+#### Gallery folders — `content/{album}/{gallery}/meta.json`
+
+Controls the hero and card shown for each gallery within an album.
+
+| Field | Default if omitted |
+|---|---|
+| `name` | Folder name with hyphens → spaces, title-cased |
+| `description` | Photo count (e.g. `"42 photos"`) |
+| `coverPhoto` | First photo in this gallery (alphabetical); set to `false` to show no cover image |
+| `backgroundImage` | First photo in this gallery (alphabetical) |
 
 ```json
 {
   "name": "Snorkeling at Playa Conchal",
+  "description": "Sea turtles and coral reefs",
   "coverPhoto": "sea-turtle-close.jpg",
   "backgroundImage": "coral-reef-wide.jpg"
 }
 ```
 
-**Home page background** — to pin a specific background on the home page, create `photos/vacations/meta.json`. The `backgroundImage` value here is a path relative to the `vacations/` folder (since the home page has no photos of its own):
-
-```
-photos/vacations/meta.json
-```
-
-```json
-{
-  "backgroundImage": "costa-rica-2023/snorkeling/coral-reef-wide.jpg"
-}
-```
-
-All filenames must exist in the same folder as the `meta.json` (except the home-level path above). If a file is missing or the JSON is malformed, the server silently falls back to automatic behavior.
-
 ---
 
 ## Navigation
 
+The home page opens as a full-screen hero with your title and a background photo. Click anywhere on the hero (or scroll) to reach the album card grid below. Each album and gallery page works the same way — click the hero to jump to the content.
+
 The URL bar always shows only `http://localhost:3000/` regardless of which page you are on. Navigation state is tracked in the browser session only — pages are not bookmarkable or shareable by URL.
 
-The browser **Back** and **Forward** buttons work normally. A breadcrumb trail in the header (`Home / Costa Rica 2023 / Snorkeling`) is always clickable for quick backwards navigation. The **Gallery** logo in the top-left always returns to the home page.
+The browser **Back** and **Forward** buttons work normally. A breadcrumb trail in the header (`Home / Costa Rica 2023 / Snorkeling`) is always clickable for quick backwards navigation.
 
 ---
 
@@ -292,7 +318,7 @@ Clicking any thumbnail opens the full-screen lightbox viewer.
 
 The lightbox wraps around — pressing next on the last photo goes back to the first. Adjacent images are prefetched in the background so navigation feels instant.
 
-The browser **Back** button closes the lightbox and returns to the excursion gallery. **Forward** after that stays on the gallery (the lightbox cannot be restored from browser history).
+The browser **Back** button closes the lightbox and returns to the photo grid. **Forward** after that stays on the grid (the lightbox cannot be restored from browser history).
 
 ---
 
@@ -310,10 +336,10 @@ Example:
 PORT=8080 npm start
 ```
 
-If you need to change the location of the `photos/` directory, edit the `PHOTOS_ROOT` constant on line 7 of `server.js`:
+If you need to change the location of the `content/` directory, edit the `PHOTOS_ROOT` constant on line 7 of `server.js`:
 
 ```js
-const PHOTOS_ROOT = path.resolve(__dirname, 'photos', 'vacations');
+const PHOTOS_ROOT = path.resolve(__dirname, 'content');
 ```
 
 ---
@@ -368,13 +394,6 @@ server {
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
     }
-
-    # Serve photos directly for better performance (optional)
-    location /photos/ {
-        alias /path/to/photo-gallery/photos/;
-        expires 30d;
-        add_header Cache-Control "public, immutable";
-    }
 }
 ```
 
@@ -384,9 +403,9 @@ server {
 
 This gallery is designed for **personal/private use on a trusted network**. Notable security properties:
 
-- **Path traversal protection:** All folder names from URLs are validated. A resolved path must start with the `photos/vacations/` root — requests like `../../etc/passwd` are rejected with a 400 error.
-- **No directory listing:** The static file server has `index: false`, so browsing to `/photos/` directly returns a 404 rather than listing files.
+- **Path traversal protection:** All folder names from URLs are validated. A resolved path must start with the `content/` root — requests like `../../etc/passwd` are rejected with a 400 error.
+- **No directory listing:** The static file server has `index: false`, so browsing to `/content/` directly returns a 404 rather than listing files.
 - **Dotfile blocking:** Files starting with `.` (e.g., `.DS_Store`, `.env`) are never served.
 - **No authentication:** There is no login system. If this server is reachable from the internet, anyone with the URL can view all photos. To restrict access, either run it on a private network, add HTTP basic auth in nginx, or use a VPN.
 - **Read-only API:** The server only reads the filesystem — there are no upload, delete, or write endpoints.
-- **Download friction:** Several layers discourage casual photo downloading — right-click and drag are blocked on thumbnails; the lightbox renders photos as CSS backgrounds (no "Save image as" on right-click); direct URL access to `/photos/...` requires a valid `Referer` header from the gallery itself, so pasting a photo URL into a new tab returns 403. No measure prevents screenshots or DevTools extraction.
+- **Download friction:** Several layers discourage casual photo downloading — right-click and drag are blocked on thumbnails; the lightbox renders photos as CSS backgrounds (no "Save image as" on right-click); direct URL access to `/content/...` requires a valid `Referer` header from the gallery itself, so pasting a photo URL into a new tab returns 403. No measure prevents screenshots or DevTools extraction.

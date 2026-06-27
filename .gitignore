@@ -1,5 +1,5 @@
 node_modules/
-photos/
+content/
 .DS_Store
 .env
 .env.local
