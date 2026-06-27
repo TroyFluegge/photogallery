@@ -78,21 +78,22 @@ PORT=8080 npm start
 
 All photos live under `content/`. Each album is a subfolder. Inside an album, you can either use **gallery subfolders** (two levels) or drop **photos directly** (one level) — whichever fits your content.
 
-**Two-level layout** — album contains gallery folders:
+Folders can be nested to **any depth**. Each level that has subfolders shows them as cards; each level that has photos shows them as a thumbnail grid. Both can coexist at the same level — subfolders appear first, then a divider, then direct photos.
+
+**Nested layout** — subfolders inside subfolders:
 
 ```
 content/
-    └── costa-rica-2023/
-        ├── meta.json              ← optional, see below
-        ├── snorkeling/
-        │   ├── meta.json          ← optional
-        │   ├── IMG_001.jpg
-        │   └── IMG_002.jpg
-        └── zip-lining/
-            └── action-shot.jpg
+    └── british-isles-2024/
+        └── wales/
+            ├── snowdonia/
+            │   └── IMG_001.jpg
+            ├── caernarfon-castle/
+            │   └── IMG_002.jpg
+            └── IMG_003.jpg        ← direct photos shown after the gallery cards
 ```
 
-**One-level layout** — album contains photos directly:
+**Flat layout** — photos directly in a folder:
 
 ```
 content/
@@ -101,8 +102,6 @@ content/
         ├── colosseum.jpg
         └── sunset.webp
 ```
-
-When photos are placed directly in an album folder alongside gallery subfolders, both are shown on the album page — galleries appear first as cards, then a divider, then the direct photos as a thumbnail grid. When an album has only direct photos (no subfolders), the photo grid opens immediately with no gallery step.
 
 **Adding a new album** — create a folder and add photos or gallery subfolders:
 

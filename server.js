@@ -54,123 +54,90 @@ function getImages(dir) {
   } catch { return []; }
 }
 
-function findAlbumCover(albumDir, albumId) {
-  for (const gallery of getSubdirs(albumDir)) {
-    const images = getImages(path.join(albumDir, gallery));
-    if (images.length) {
-      return `/content/${albumId}/${gallery}/${images[0]}`;
-    }
+// Recursively finds the first photo URL under dir, building the content URL with urlPath prefix.
+function findCoverAnywhere(dir, urlPath) {
+  const img = getImages(dir)[0];
+  if (img) return `/content/${urlPath ? urlPath + '/' : ''}${img}`;
+  for (const sub of getSubdirs(dir)) {
+    const subPath = urlPath ? `${urlPath}/${sub}` : sub;
+    const found   = findCoverAnywhere(path.join(dir, sub), subPath);
+    if (found) return found;
   }
   return null;
 }
 
-function findFirstPhotoAnywhere() {
-  for (const album of getSubdirs(PHOTOS_ROOT)) {
-    const cover = findAlbumCover(path.join(PHOTOS_ROOT, album), album);
-    if (cover) return cover;
+// Generic handler for any folder depth under content/.
+function handleBrowse(urlPath, res) {
+  const segments  = urlPath ? urlPath.split('/').filter(Boolean) : [];
+  const targetDir = segments.length ? safePath(...segments) : PHOTOS_ROOT;
+  if (!targetDir) return res.status(400).json({ error: 'Invalid path' });
+  if (!fs.existsSync(targetDir)) return res.status(404).json({ error: 'Not found' });
+
+  const meta   = readMeta(targetDir);
+  const isRoot = segments.length === 0;
+  const prefix = urlPath ? urlPath + '/' : '';
+
+  let folders = getSubdirs(targetDir).map(id => {
+    const dir    = path.join(targetDir, id);
+    const fm     = readMeta(dir);
+    const subUrl = `${prefix}${id}`;
+    const direct = getImages(dir)[0];
+    const coverPhoto = fm.coverPhoto === false
+      ? false
+      : fm.coverPhoto
+        ? `/content/${subUrl}/${fm.coverPhoto}`
+        : direct
+          ? `/content/${subUrl}/${direct}`
+          : findCoverAnywhere(dir, subUrl);
+    return {
+      id,
+      name:        fm.name || slugToNameWithoutYear(id),
+      year:        fm.year  || extractYear(id) || null,
+      coverPhoto,
+      folderCount: getSubdirs(dir).length,
+      photoCount:  getImages(dir).length
+    };
+  });
+
+  // Root level sorted newest-first by year; all other levels stay alphabetical.
+  if (isRoot) {
+    folders.sort((a, b) => {
+      if (a.year === b.year) return a.name.localeCompare(b.name);
+      if (a.year === null)   return 1;
+      if (b.year === null)   return -1;
+      return b.year - a.year;
+    });
   }
-  return null;
+
+  const photos = getImages(targetDir).map(f => `/content/${prefix}${f}`);
+
+  const backgroundImage = meta.backgroundImage
+    ? `/content/${prefix}${meta.backgroundImage}`
+    : findCoverAnywhere(targetDir, urlPath || '');
+
+  // Ancestor names so the frontend can build breadcrumbs without extra fetches.
+  const ancestors = segments.map((seg, i) => {
+    const dir = safePath(...segments.slice(0, i + 1));
+    const m   = dir ? readMeta(dir) : {};
+    return { slug: seg, name: m.name || slugToNameWithoutYear(seg) };
+  });
+
+  const lastName = segments[segments.length - 1];
+  res.json({
+    ...(isRoot ? { title: meta.title || null, subtitle: meta.subtitle || null } : {}),
+    name:        meta.name        || (lastName ? slugToNameWithoutYear(lastName) : null),
+    year:        meta.year        || (lastName ? extractYear(lastName) || null   : null),
+    description: meta.description || null,
+    backgroundImage,
+    ancestors,
+    folders,
+    photos
+  });
 }
 
-// GET /api/albums
-app.get('/api/albums', (_req, res) => {
-  const rootMeta = readMeta(PHOTOS_ROOT);
-  const albums = getSubdirs(PHOTOS_ROOT).map(id => {
-    const dir  = path.join(PHOTOS_ROOT, id);
-    const meta = readMeta(dir);
-    const directImage = getImages(dir)[0];
-    const coverPhoto = meta.coverPhoto === false
-      ? false
-      : meta.coverPhoto
-        ? `/content/${id}/${meta.coverPhoto}`
-        : directImage
-          ? `/content/${id}/${directImage}`
-          : findAlbumCover(dir, id);
-    return {
-      id,
-      name:         meta.name || slugToNameWithoutYear(id),
-      year:         meta.year  || extractYear(id) || null,
-      coverPhoto,
-      galleryCount: getSubdirs(dir).length
-    };
-  }).sort((a, b) => {
-    if (a.year === b.year) return a.name.localeCompare(b.name);
-    if (a.year === null) return 1;
-    if (b.year === null) return -1;
-    return b.year - a.year;
-  });
-  const backgroundImage = rootMeta.backgroundImage
-    ? `/content/${rootMeta.backgroundImage}`
-    : findFirstPhotoAnywhere();
-  res.json({
-    title:           rootMeta.title    || null,
-    subtitle:        rootMeta.subtitle || null,
-    backgroundImage,
-    albums
-  });
-});
-
-// GET /api/albums/:album
-app.get('/api/albums/:album', (req, res) => {
-  const { album } = req.params;
-  const albumDir = safePath(album);
-  if (!albumDir) return res.status(400).json({ error: 'Invalid path' });
-  if (!fs.existsSync(albumDir)) return res.status(404).json({ error: 'Not found' });
-
-  const meta = readMeta(albumDir);
-  const galleries = getSubdirs(albumDir).map(id => {
-    const galleryDir  = path.join(albumDir, id);
-    const galleryMeta = readMeta(galleryDir);
-    const images = getImages(galleryDir);
-    const coverPhoto = galleryMeta.coverPhoto === false
-      ? false
-      : galleryMeta.coverPhoto
-        ? `/content/${album}/${id}/${galleryMeta.coverPhoto}`
-        : images.length ? `/content/${album}/${id}/${images[0]}` : null;
-    return {
-      id,
-      name:       galleryMeta.name || slugToName(id),
-      coverPhoto,
-      photoCount: images.length
-    };
-  });
-
-  const photos = getImages(albumDir).map(f => `/content/${album}/${f}`);
-
-  const backgroundImage = meta.backgroundImage
-    ? `/content/${album}/${meta.backgroundImage}`
-    : findAlbumCover(albumDir, album) || photos[0] || null;
-  res.json({
-    name:        meta.name                        || slugToNameWithoutYear(album),
-    year:        meta.year                        || extractYear(album) || null,
-    description: meta.description || meta.subtitle || null,
-    backgroundImage,
-    galleries,
-    photos
-  });
-});
-
-// GET /api/albums/:album/:gallery
-app.get('/api/albums/:album/:gallery', (req, res) => {
-  const { album, gallery } = req.params;
-  const galleryDir = safePath(album, gallery);
-  if (!galleryDir) return res.status(400).json({ error: 'Invalid path' });
-  if (!fs.existsSync(galleryDir)) return res.status(404).json({ error: 'Not found' });
-
-  const meta   = readMeta(galleryDir);
-  const images = getImages(galleryDir);
-  const photos = images.map(f => `/content/${album}/${gallery}/${f}`);
-  const backgroundImage = meta.backgroundImage
-    ? `/content/${album}/${gallery}/${meta.backgroundImage}`
-    : photos[0] || null;
-  res.json({
-    name:        meta.name                        || slugToNameWithoutYear(gallery),
-    year:        meta.year                        || extractYear(gallery) || null,
-    description: meta.description || meta.subtitle || null,
-    backgroundImage,
-    photos
-  });
-});
+// Browse API — handles any folder depth under content/
+app.get('/api/browse',   (_req, res) => handleBrowse('', res));
+app.get('/api/browse/*', (req, res)  => handleBrowse(req.params[0], res));
 
 // Serve content directory — referer guard + no-store cache
 app.use('/content', (req, res, next) => {
