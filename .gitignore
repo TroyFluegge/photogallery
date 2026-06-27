@@ -1,6 +1,5 @@
 node_modules/
-content/*
-!content/.gitkeep
+content/
 .DS_Store
 .env
 .env.local
