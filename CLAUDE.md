@@ -64,7 +64,7 @@ All endpoints are read-only. The server has no write, upload, or delete routes.
 | Method | Path | Returns |
 |---|---|---|
 | GET | `/api/albums` | `{ title: string\|null, subtitle: string\|null, backgroundImage: string\|null, albums: Array<{ id, name, year: number\|null, coverPhoto\|null, galleryCount }> }` |
-| GET | `/api/albums/:album` | `{ name, year: number\|null, description: string\|null, backgroundImage: string\|null, galleries: Array<{ id, name, coverPhoto\|null, photoCount }>, photos: string[] }` — `photos` is populated (and `galleries` empty) when the folder contains images directly with no subfolders |
+| GET | `/api/albums/:album` | `{ name, year: number\|null, description: string\|null, backgroundImage: string\|null, galleries: Array<{ id, name, coverPhoto\|null, photoCount }>, photos: string[] }` — `galleries` lists subfolders; `photos` lists images directly in the album folder; both can be non-empty simultaneously |
 | GET | `/api/albums/:album/:gallery` | `{ name, year: number\|null, description: string\|null, backgroundImage: string\|null, photos: string[] }` |
 | — | `/content/...` | Static file serving from `./content/` |
 | — | `/*` | Returns `public/index.html` (SPA catch-all) |
@@ -80,7 +80,7 @@ Listens on `popstate` (back/forward) and `DOMContentLoaded`. Dispatches to one o
 
 ### Render functions
 - `renderHome()` — fetches `/api/albums`, sets `body.home-hero` / `#app.home-page` classes, calls `setBackground`, renders a full-viewport hero section followed by a `.gallery-section` card grid. The header is hidden via `body.home-hero`. Clearing these classes on error or when navigating away restores normal layout.
-- `renderAlbum(albumId)` — removes `home-hero`/`home-page` classes, fetches `/api/albums/:album`, calls `setBackground`. If `galleries` is non-empty renders the gallery card grid; if `galleries` is empty but `photos` is non-empty renders a photo grid + lightbox directly at this level (no separate gallery step); otherwise shows empty state.
+- `renderAlbum(albumId)` — removes `home-hero`/`home-page` classes, fetches `/api/albums/:album`, calls `setBackground`. Renders gallery card grid (if any galleries), then a `.section-divider` (if both galleries and photos exist), then a photo grid (if any direct photos). Empty state shown only when both are absent.
 - `renderGallery(albumId, galleryId)` — removes `home-hero`/`home-page` classes, fetches album (breadcrumb) and gallery in parallel via `Promise.all`, calls `setBackground(galleryData.backgroundImage)`, renders thumbnail grid
 
 `renderHome()` uses `title`/`subtitle` from the API response (set in `content/meta.json`), falling back to "Title" / "Description" if not set.
@@ -178,7 +178,7 @@ Default port: `3000`. Override: `PORT=8080 npm start`.
 - **No video support.** Only still image formats are recognized. Video files in the folders are silently ignored.
 - **HEIC not supported.** iPhone HEIC files must be exported as JPEG before adding. The browser cannot display HEIC natively.
 - **No pagination.** All photos in a folder are rendered at once. For very large sets (500+ photos), consider splitting into separate folders.
-- **Flexible depth.** Albums can contain either gallery subfolders (two-level) or photos directly (one-level). Mixing files and subfolders in the same album is not supported — if any subfolders exist, direct photos are ignored.
+- **Flexible depth.** Albums can contain gallery subfolders, photos directly, or both. When both exist, galleries are shown first as cards, then a labeled divider, then the direct photos as a thumbnail grid.
 
 ---
 
@@ -232,10 +232,10 @@ Default port: `3000`. Override: `PORT=8080 npm start`.
 - Path traversal protection via `safePath()` in all API routes
 - `README.md` added: install, photo management, deployment (PM2 / systemd / nginx), security notes
 
-### 2026-06-26 — Flexible one- or two-level depth
+### 2026-06-26 — Flexible one- or two-level depth (mixed support added later)
 - Albums can now contain photos directly (no gallery subfolder required)
-- `/api/albums/:album` returns a `photos` array (populated when no gallery subfolders exist, empty otherwise)
-- `renderAlbum` renders a photo grid + lightbox when `galleries` is empty and `photos` is non-empty, skipping the gallery card step entirely
+- `/api/albums/:album` returns both `galleries[]` and `photos[]`; both can be non-empty simultaneously
+- `renderAlbum` renders gallery cards first, then a `.section-divider`, then the direct photo grid when both exist; photo-only or gallery-only albums render the single section without a divider
 - Lightbox back-button history contract works unchanged: back from lightbox returns to album page without re-fetching
 
 ### 2026-06-26 — Rename: content/album/gallery

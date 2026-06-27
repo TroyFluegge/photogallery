@@ -194,23 +194,47 @@ async function renderAlbum(albumId) {
       { label: data.name }
     ]);
 
-    // No gallery subfolders — render photo grid directly if photos exist
-    if (!data.galleries.length) {
-      if (!data.photos?.length) {
-        app.classList.remove('home-page');
-        app.innerHTML = `
-          <h1 class="page-title">${escapeHtml(data.name)}</h1>
-          <div class="empty-state"><p>No photos found in this album folder.</p></div>`;
-        return;
-      }
+    const hasGalleries = data.galleries.length > 0;
+    const hasPhotos    = data.photos?.length > 0;
 
-      const photoCount = data.photos.length;
+    if (!hasGalleries && !hasPhotos) {
+      app.classList.remove('home-page');
       app.innerHTML = `
-        <section class="hero-section sub-hero hero-clickable">
-          <h1 class="hero-title">${escapeHtml(data.name)}</h1>
-          <p class="hero-subtitle">${escapeHtml(data.description || (data.year ? String(data.year) : `${photoCount} photo${photoCount !== 1 ? 's' : ''}`))}</p>
-        </section>
-        <section class="gallery-section" id="gallery-section">
+        <h1 class="page-title">${escapeHtml(data.name)}</h1>
+        <div class="empty-state"><p>No photos found in this album folder.</p></div>`;
+      return;
+    }
+
+    const photoCount = data.photos?.length || 0;
+    const subtitle   = data.description || (data.year ? String(data.year) :
+      (!hasGalleries ? `${photoCount} photo${photoCount !== 1 ? 's' : ''}` : ''));
+
+    app.innerHTML = `
+      <section class="hero-section sub-hero hero-clickable">
+        <h1 class="hero-title">${escapeHtml(data.name)}</h1>
+        <p class="hero-subtitle">${escapeHtml(subtitle)}</p>
+      </section>
+      <section class="gallery-section" id="gallery-section">
+        ${hasGalleries ? `
+          <div class="card-grid">
+            ${data.galleries.map(g => `
+              <div class="card${g.coverPhoto === false ? ' card--no-cover' : ''}" role="link" tabindex="0"
+                   data-album="${encodeURIComponent(albumId)}"
+                   data-gallery="${encodeURIComponent(g.id)}">
+                ${g.coverPhoto
+                  ? `<img class="card-cover" src="${g.coverPhoto}" alt="${escapeHtml(g.name)}" loading="lazy">`
+                  : g.coverPhoto === false ? ''
+                  : `<div class="card-cover"></div>`}
+                <div class="card-info">
+                  <div class="card-name">${escapeHtml(g.name)}</div>
+                  <div class="card-meta">${g.photoCount} photo${g.photoCount !== 1 ? 's' : ''}</div>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        ` : ''}
+        ${hasGalleries && hasPhotos ? `<div class="section-divider"><span>Photos</span></div>` : ''}
+        ${hasPhotos ? `
           <div class="photo-grid">
             ${data.photos.map((url, i) => `
               <img
@@ -223,12 +247,38 @@ async function renderAlbum(albumId) {
               >
             `).join('')}
           </div>
-        </section>`;
+        ` : ''}
+      </section>`;
 
-      app.querySelector('.hero-section').addEventListener('click', () => {
-        document.getElementById('gallery-section').scrollIntoView({ behavior: 'smooth' });
+    app.querySelector('.hero-section').addEventListener('click', () => {
+      document.getElementById('gallery-section').scrollIntoView({ behavior: 'smooth' });
+    });
+
+    if (hasGalleries) {
+      app.querySelector('.card-grid').addEventListener('click', e => {
+        const card = e.target.closest('.card[data-gallery]');
+        if (card) navigate({
+          page:      'gallery',
+          albumId:   decodeURIComponent(card.dataset.album),
+          galleryId: decodeURIComponent(card.dataset.gallery)
+        });
       });
+      app.querySelector('.card-grid').addEventListener('keydown', e => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          const card = e.target.closest('.card[data-gallery]');
+          if (card) {
+            e.preventDefault();
+            navigate({
+              page:      'gallery',
+              albumId:   decodeURIComponent(card.dataset.album),
+              galleryId: decodeURIComponent(card.dataset.gallery)
+            });
+          }
+        }
+      });
+    }
 
+    if (hasPhotos) {
       const grid = app.querySelector('.photo-grid');
       grid.addEventListener('click', e => {
         const thumb = e.target.closest('.photo-thumb');
@@ -240,58 +290,7 @@ async function renderAlbum(albumId) {
       grid.addEventListener('dragstart', e => {
         if (e.target.closest('.photo-thumb')) e.preventDefault();
       });
-      return;
     }
-
-    app.innerHTML = `
-      <section class="hero-section sub-hero hero-clickable">
-        <h1 class="hero-title">${escapeHtml(data.name)}</h1>
-        <p class="hero-subtitle">${escapeHtml(data.description || (data.year ? String(data.year) : ''))}</p>
-      </section>
-      <section class="gallery-section" id="gallery-section">
-        <div class="card-grid">
-          ${data.galleries.map(g => `
-            <div class="card${g.coverPhoto === false ? ' card--no-cover' : ''}" role="link" tabindex="0"
-                 data-album="${encodeURIComponent(albumId)}"
-                 data-gallery="${encodeURIComponent(g.id)}">
-              ${g.coverPhoto
-                ? `<img class="card-cover" src="${g.coverPhoto}" alt="${escapeHtml(g.name)}" loading="lazy">`
-                : g.coverPhoto === false ? ''
-                : `<div class="card-cover"></div>`}
-              <div class="card-info">
-                <div class="card-name">${escapeHtml(g.name)}</div>
-                <div class="card-meta">${g.photoCount} photo${g.photoCount !== 1 ? 's' : ''}</div>
-              </div>
-            </div>
-          `).join('')}
-        </div>
-      </section>`;
-
-    app.querySelector('.hero-section').addEventListener('click', () => {
-      document.getElementById('gallery-section').scrollIntoView({ behavior: 'smooth' });
-    });
-
-    app.querySelector('.card-grid').addEventListener('click', e => {
-      const card = e.target.closest('.card[data-gallery]');
-      if (card) navigate({
-        page:      'gallery',
-        albumId:   decodeURIComponent(card.dataset.album),
-        galleryId: decodeURIComponent(card.dataset.gallery)
-      });
-    });
-    app.querySelector('.card-grid').addEventListener('keydown', e => {
-      if (e.key === 'Enter' || e.key === ' ') {
-        const card = e.target.closest('.card[data-gallery]');
-        if (card) {
-          e.preventDefault();
-          navigate({
-            page:      'gallery',
-            albumId:   decodeURIComponent(card.dataset.album),
-            galleryId: decodeURIComponent(card.dataset.gallery)
-          });
-        }
-      }
-    });
   } catch (e) {
     app.classList.remove('home-page');
     setError(e.message);

@@ -218,6 +218,27 @@ body.home-hero .site-header {
   color: var(--text-muted);
 }
 
+/* ─── Section divider (between gallery cards and direct photos) ──────────── */
+
+.section-divider {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin: 2.5rem 0 1.5rem;
+  color: rgba(255, 255, 255, 0.4);
+  font-size: 0.75rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.section-divider::before,
+.section-divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.15);
+}
+
 /* ─── Photo thumbnail grid ───────────────────────────────────────────────── */
 
 .photo-grid {

@@ -135,15 +135,11 @@ app.get('/api/albums/:album', (req, res) => {
     };
   });
 
-  // When there are no gallery subfolders, serve photos directly from this album folder
-  const directImages = galleries.length === 0 ? getImages(albumDir) : [];
-  const photos = directImages.map(f => `/content/${album}/${f}`);
+  const photos = getImages(albumDir).map(f => `/content/${album}/${f}`);
 
   const backgroundImage = meta.backgroundImage
     ? `/content/${album}/${meta.backgroundImage}`
-    : galleries.length > 0
-      ? findAlbumCover(albumDir, album)
-      : photos[0] || null;
+    : findAlbumCover(albumDir, album) || photos[0] || null;
   res.json({
     name:        meta.name                        || slugToNameWithoutYear(album),
     year:        meta.year                        || extractYear(album) || null,

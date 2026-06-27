@@ -102,7 +102,7 @@ content/
         └── sunset.webp
 ```
 
-When photos are placed directly in an album folder (no subfolders), the photo grid opens immediately when you click that album — no gallery step.
+When photos are placed directly in an album folder alongside gallery subfolders, both are shown on the album page — galleries appear first as cards, then a divider, then the direct photos as a thumbnail grid. When an album has only direct photos (no subfolders), the photo grid opens immediately with no gallery step.
 
 **Adding a new album** — create a folder and add photos or gallery subfolders:
 
