@@ -185,12 +185,13 @@ Camera-generated names like `IMG_4521.jpg` sort correctly as long as the numberi
 2023-03-15-10-45-sea-turtle.jpg
 ```
 
-Albums and galleries are also listed in **alphabetical order by folder name**. Prefix folder names with a number or date to control the order on the home and album pages:
+Albums on the home page are sorted by **year, newest first** (year extracted from the folder name or `meta.json`). Albums with no year sort last, then alphabetically. Galleries within an album are listed in **alphabetical order by folder name**. Prefix gallery folder names with a number to control their order:
 
 ```
 content/
-├── 01-costa-rica-2023/
-└── 02-italy-2025/
+└── costa-rica-2023/
+    ├── 01-snorkeling/
+    └── 02-zip-lining/
 ```
 
 ---
