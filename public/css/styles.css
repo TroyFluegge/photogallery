@@ -75,7 +75,7 @@ body {
 .hero-subtitle {
   font-size: clamp(1.5rem, 3.75vw, 2.1rem);
   color: rgba(255, 255, 255, 0.82);
-  font-weight: 400;
+  font-weight: 300;
   text-shadow: 0 1px 10px rgba(0, 0, 0, 0.5);
 }
 
