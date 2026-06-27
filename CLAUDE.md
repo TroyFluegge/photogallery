@@ -63,27 +63,27 @@ All endpoints are read-only. The server has no write, upload, or delete routes.
 
 | Method | Path | Returns |
 |---|---|---|
-| GET | `/api/albums` | `{ title: string\|null, subtitle: string\|null, backgroundImage: string\|null, albums: Array<{ id, name, year: number\|null, coverPhoto\|null, galleryCount }> }` |
-| GET | `/api/albums/:album` | `{ name, year: number\|null, description: string\|null, backgroundImage: string\|null, galleries: Array<{ id, name, coverPhoto\|null, photoCount }>, photos: string[] }` — `galleries` lists subfolders; `photos` lists images directly in the album folder; both can be non-empty simultaneously |
-| GET | `/api/albums/:album/:gallery` | `{ name, year: number\|null, description: string\|null, backgroundImage: string\|null, photos: string[] }` |
+| GET | `/api/browse` | Root browse: `{ title, subtitle, name, year, description, backgroundImage, ancestors: [], folders: Array<{ id, name, year, coverPhoto, folderCount, photoCount }>, photos: string[] }` |
+| GET | `/api/browse/*path` | Same shape as root, for any folder depth under `content/`. `ancestors` contains `{ slug, name }` for each path segment (including current). |
 | — | `/content/...` | Static file serving from `./content/` |
 | — | `/*` | Returns `public/index.html` (SPA catch-all) |
 
-Photo URLs are absolute-path strings served directly by Express static middleware. Album-level photos use `/content/{album}/{filename}`; gallery photos use `/content/{album}/{gallery}/{filename}`.
+Photo URLs are absolute-path strings: `/content/{path/to/file}`. `folders` and `photos` can both be non-empty (mixed layout). Root response additionally includes `title` and `subtitle` from `content/meta.json`. `findCoverAnywhere(dir, urlPath)` recursively walks subdirectories to find a cover photo when none exists directly in a folder.
 
 ---
 
 ## Frontend Internals (`public/js/app.js`)
 
 ### Router
-Listens on `popstate` (back/forward) and `DOMContentLoaded`. Dispatches to one of three render functions based on `event.state` (a plain object `{ page, albumId?, galleryId? }`). Navigation uses `navigate(state)` which calls `history.pushState(state, '', '/')` — the URL is always `/` and never changes. Cards are `<div role="link">` elements with delegated click handlers, not `<a>` tags. Breadcrumb links are `<span class="breadcrumb-link">` elements with click listeners.
+Listens on `popstate` (back/forward) and `DOMContentLoaded`. Navigation state uses `{ page: 'home' }` for the root or `{ page: 'browse', path: 'seg1/seg2/seg3' }` for any nested folder. `stateToPath(state)` normalises legacy `album`/`gallery` state objects for backward compat. Navigation uses `navigate(state)` → `history.pushState(state, '', '/')` — URL always stays `/`. Cards are `<div role="link" data-path="...">` elements with delegated click handlers.
 
-### Render functions
-- `renderHome()` — fetches `/api/albums`, sets `body.home-hero` / `#app.home-page` classes, calls `setBackground`, renders a full-viewport hero section followed by a `.gallery-section` card grid. The header is hidden via `body.home-hero`. Clearing these classes on error or when navigating away restores normal layout.
-- `renderAlbum(albumId)` — removes `home-hero`/`home-page` classes, fetches `/api/albums/:album`, calls `setBackground`. Renders gallery card grid (if any galleries), then a `.section-divider` (if both galleries and photos exist), then a photo grid (if any direct photos). Empty state shown only when both are absent.
-- `renderGallery(albumId, galleryId)` — removes `home-hero`/`home-page` classes, fetches album (breadcrumb) and gallery in parallel via `Promise.all`, calls `setBackground(galleryData.backgroundImage)`, renders thumbnail grid
-
-`renderHome()` uses `title`/`subtitle` from the API response (set in `content/meta.json`), falling back to "Title" / "Description" if not set.
+### Render function
+`renderBrowse(segments)` is the single render function for all depths:
+- `segments = []` → home page: `body.home-hero` set, full-screen hero with `title`/`subtitle`, folders as year-sorted cards
+- `segments = [...]` → inner page: sub-hero with folder name/year/description, breadcrumb from `data.ancestors`, folders as cards + optional section divider + direct photos as thumbnail grid
+- Fetches `/api/browse` or `/api/browse/seg1/seg2/...`
+- Breadcrumb: built from `data.ancestors.slice(0, -1)` (each ancestor links back) + current page label (no link)
+- Folder card meta line: year if present, else photo count if leaf (no subfolders), else empty
 
 `setBackground(url)` fades `#page-bg` opacity to 0, swaps the `background-image` after 400ms, then fades back to 1. If `url` is null the element stays hidden.
 
@@ -97,7 +97,7 @@ Listens on `popstate` (back/forward) and `DOMContentLoaded`. Dispatches to one o
 - Click-to-close: only triggers when `e.target` is the backdrop or `#lb-stage`, not the image or buttons
 
 ### Back-button history contract
-`currentRenderedState` tracks the last page rendered (set in `restoreState` before dispatch). When `popstate` fires with album or gallery state and the lightbox is open, `restoreState` calls `_forceClose()` and returns early — no network request, no re-render. Forward navigation into `{ page: 'lightbox' }` state is a no-op (photos array is not serialisable into history state).
+`currentRenderedPath` tracks the path string of the last rendered page. When `popstate` fires with a non-lightbox state and the lightbox is open, `restoreState` calls `_forceClose()` and returns early if the path matches — no network request, no re-render. Forward navigation into `{ page: 'lightbox' }` state is a no-op (photos array is not serialisable into history state).
 
 ---
 
@@ -178,7 +178,7 @@ Default port: `3000`. Override: `PORT=8080 npm start`.
 - **No video support.** Only still image formats are recognized. Video files in the folders are silently ignored.
 - **HEIC not supported.** iPhone HEIC files must be exported as JPEG before adding. The browser cannot display HEIC natively.
 - **No pagination.** All photos in a folder are rendered at once. For very large sets (500+ photos), consider splitting into separate folders.
-- **Flexible depth.** Albums can contain gallery subfolders, photos directly, or both. When both exist, galleries are shown first as cards, then a labeled divider, then the direct photos as a thumbnail grid.
+- **Unlimited nesting.** Folders can be nested to any depth — each level renders as a card grid of subfolders, an optional divider, and any direct photos. The `/api/browse/*` endpoint handles any path length.
 
 ---
 
@@ -258,6 +258,15 @@ Default port: `3000`. Override: `PORT=8080 npm start`.
 ### 2026-06-26 — Thumbnail sizing and shape
 - Thumbnail min-width increased from 180px → 234px (+30%); mobile breakpoint from 100px → 130px
 - Thumbnail `aspect-ratio` changed from `1` (square) to `4/3` (landscape), matching card cover ratio
+
+### 2026-06-26 — Unlimited folder nesting
+- Replaced the fixed 2-level API (`/api/albums`, `/api/albums/:album`, `/api/albums/:album/:gallery`) with a single generic `/api/browse/*` endpoint that handles any folder depth
+- `findCoverAnywhere(dir, urlPath)` recursively searches for a cover photo at any nesting level
+- `handleBrowse(urlPath, res)` builds the response for any path: `folders[]`, `photos[]`, `ancestors[]` (for breadcrumbs), `backgroundImage`, and root-only `title`/`subtitle`
+- Replaced `renderHome` + `renderAlbum` + `renderGallery` with a single `renderBrowse(segments)` function; segments drive the API path and breadcrumb
+- Navigation state changed from `{ page: 'album', albumId }` / `{ page: 'gallery', albumId, galleryId }` to `{ page: 'browse', path: 'seg1/seg2/...' }`; old state shapes still handled in `stateToPath` for backward compat
+- `currentRenderedState` renamed to `currentRenderedPath` (now a string)
+- Breadcrumb built from `data.ancestors.slice(0, -1)` returned by the API (no extra fetches needed)
 
 ### 2026-06-26 — Mobile lightbox full-screen
 - `#lb-stage` padding reduced to `0` on mobile (`max-width: 640px`) so the photo fills the full viewport
