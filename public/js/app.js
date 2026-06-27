@@ -150,7 +150,7 @@ async function renderBrowse(segments) {
     let heroTitle, heroSubtitle;
     if (isRoot) {
       heroTitle    = data.title    || 'Title';
-      heroSubtitle = data.subtitle || 'Description';
+      heroSubtitle = data.description || 'Description';
     } else {
       heroTitle    = data.name;
       heroSubtitle = data.description || (data.year ? String(data.year) :

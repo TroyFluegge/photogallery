@@ -124,10 +124,10 @@ function handleBrowse(urlPath, res) {
 
   const lastName = segments[segments.length - 1];
   res.json({
-    ...(isRoot ? { title: meta.title || null, subtitle: meta.subtitle || null } : {}),
+    ...(isRoot ? { title: meta.title || null } : {}),
     name:        meta.name        || (lastName ? slugToNameWithoutYear(lastName) : null),
     year:        meta.year        || (lastName ? extractYear(lastName) || null   : null),
-    description: meta.description || null,
+    description: meta.description || meta.subtitle || null,
     backgroundImage,
     ancestors,
     folders,

@@ -232,7 +232,7 @@ Controls the full-screen hero shown when the site first loads.
 | Field | Default if omitted |
 |---|---|
 | `title` | `"Title"` |
-| `subtitle` | `"Description"` |
+| `description` | `"Description"` |
 | `backgroundImage` | First photo found anywhere in the content folder |
 
 The `backgroundImage` value is a path **relative to the `content/` directory**, since the home page has no photos of its own.
@@ -240,7 +240,7 @@ The `backgroundImage` value is a path **relative to the `content/` directory**, 
 ```json
 {
   "title": "Our Family Travels",
-  "subtitle": "Making memories around the world",
+  "description": "Making memories around the world",
   "backgroundImage": "costa-rica-2023/snorkeling/coral-reef-wide.jpg"
 }
 ```
