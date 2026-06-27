@@ -107,7 +107,7 @@ Listens on `popstate` (back/forward) and `DOMContentLoaded`. Dispatches to one o
 - Card grid uses `auto-fill, minmax(280px, 1fr)` — inherently responsive, no media query needed for column count
 - Thumbnail grid uses `auto-fill, minmax(234px, 1fr)` with `aspect-ratio: 4/3` — landscape crops via `object-fit: cover`
 - Lightbox z-index: `9999` for the overlay, `10001` for buttons (so they sit above the image)
-- One media query at `max-width: 640px` tightens padding and shrinks minimum card/thumb widths
+- One media query at `max-width: 640px` tightens padding and shrinks minimum card/thumb widths; `#lb-stage` padding is set to `0` so the lightbox image fills the full screen on mobile (buttons are `position: fixed` so they overlay the image and don't need stage padding)
 - `body.home-hero .site-header { display: none }` — header hidden on home hero; removed when navigating to inner pages
 - `#app.home-page { padding: 0; max-width: none }` — overrides default app container so hero section is full-bleed
 - `.hero-section` is `height: 100vh` with centered flex; `.hero-clickable` adds `cursor: pointer` and a click listener that scrolls to `#gallery-section`
@@ -258,3 +258,7 @@ Default port: `3000`. Override: `PORT=8080 npm start`.
 ### 2026-06-26 — Thumbnail sizing and shape
 - Thumbnail min-width increased from 180px → 234px (+30%); mobile breakpoint from 100px → 130px
 - Thumbnail `aspect-ratio` changed from `1` (square) to `4/3` (landscape), matching card cover ratio
+
+### 2026-06-26 — Mobile lightbox full-screen
+- `#lb-stage` padding reduced to `0` on mobile (`max-width: 640px`) so the photo fills the full viewport
+- All lightbox controls (`close`, `prev`, `next`, `counter`) are `position: fixed` and overlay the image, so no stage padding is needed to clear them
