@@ -148,7 +148,7 @@ app.use('/content', (req, res, next) => {
     try { allowed = new URL(referer).host === host; } catch { /* malformed — deny */ }
   }
   if (!allowed) return res.status(403).send('Forbidden');
-  res.setHeader('Cache-Control', 'no-store');
+  res.setHeader('Cache-Control', 'public, max-age=2592000');
   next();
 }, express.static(path.join(__dirname, 'content'), {
   index: false,
