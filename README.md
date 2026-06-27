@@ -197,7 +197,7 @@ content/
 
 ### Cover Photos
 
-The image shown on album and gallery cards is chosen automatically: the **first alphabetical image file** in the folder. For gallery cards, this is the first photo in that gallery's folder. For album cards, the server walks gallery subfolders (alphabetically) and uses the first photo it finds.
+The image shown on album and gallery cards is chosen automatically: the **first alphabetical image file** in the folder. For gallery cards, this is the first photo in that gallery's folder. For album cards, the first direct photo in the album folder is used if one exists; otherwise the server walks gallery subfolders (alphabetically) and uses the first photo it finds there.
 
 To set a specific cover photo, use `meta.json` — see below.
 
