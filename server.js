@@ -93,6 +93,11 @@ app.get('/api/albums', (_req, res) => {
       coverPhoto,
       galleryCount: getSubdirs(dir).length
     };
+  }).sort((a, b) => {
+    if (a.year === b.year) return a.name.localeCompare(b.name);
+    if (a.year === null) return 1;
+    if (b.year === null) return -1;
+    return b.year - a.year;
   });
   const backgroundImage = rootMeta.backgroundImage
     ? `/content/${rootMeta.backgroundImage}`

@@ -152,7 +152,8 @@ Setting `"coverPhoto": false` explicitly disables the cover image for that card 
 - Gallery page: filename in the gallery folder; fallback is the first photo in that gallery
 
 ### Sort order
-- Folders (albums, galleries): alphabetical by folder name
+- Albums (home page): by year descending (newest first); null-year albums last, then alphabetical within same year
+- Galleries (album page): alphabetical by folder name
 - Photos within a folder: alphabetical by filename
 - Cover photo: first image in the sorted list, or `meta.json` `coverPhoto` if set
 
