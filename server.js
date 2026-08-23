@@ -70,7 +70,13 @@ async function getGridThumbnail(sourceAbsPath) {
   } catch { /* not cached yet — fall through and generate */ }
 
   fs.mkdirSync(path.dirname(cachedPath), { recursive: true });
-  await sharp(sourceAbsPath).rotate().resize({ width: GRID_THUMB_WIDTH, withoutEnlargement: true }).toFile(cachedPath);
+  // Write to a per-request temp file, then rename atomically. Two overlapping
+  // requests for the same uncached photo would otherwise both write directly
+  // to cachedPath and could interleave, leaving a corrupted file on disk that
+  // looks "cached" (exists, right mtime) to every request after it.
+  const tmpPath = `${cachedPath}.tmp${process.pid}.${Date.now()}`;
+  await sharp(sourceAbsPath).rotate().resize({ width: GRID_THUMB_WIDTH, withoutEnlargement: true }).toFile(tmpPath);
+  fs.renameSync(tmpPath, cachedPath);
   return cachedPath;
 }
 
