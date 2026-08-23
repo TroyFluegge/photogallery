@@ -7,6 +7,7 @@ This file gives Claude Code a complete picture of the project so future sessions
 ## Mandates
 
 - **Never commit or push** unless the user explicitly asks.
+- **Never add a `Co-Authored-By: Claude` (or similar Anthropic attribution) trailer** to commit messages in this repo.
 
 ---
 
@@ -22,13 +23,16 @@ A self-hosted photo gallery website built with Node.js + Express on the backend 
 
 ```
 photogallery/
-├── server.js               Backend: API routes + static file serving
-├── package.json            Single runtime dep: express ^4
+├── server.js               Backend: API routes + static file serving + on-demand thumbnails
+├── package.json            Runtime deps: express ^4, sharp ^0.33
+├── scripts/
+│   └── shrink-originals.js Manual/rerun-as-needed: shrinks oversized photos in content/ in place
 ├── public/
 │   ├── index.html          Single HTML shell; lightbox lives here as a hidden overlay
 │   ├── css/styles.css      Dark theme, card grid, thumbnail grid, lightbox, responsive
 │   └── js/app.js           Hash router, API fetcher, three page renderers, lightbox logic
 ├── content/                All user content lives here — never committed to source control
+├── .thumbcache/            Generated grid-thumbnail cache — disposable, gitignored, safe to delete anytime
 ├── README.md               End-user docs: install, photo management, deployment
 └── CLAUDE.md               This file
 ```
@@ -55,16 +59,24 @@ The lightbox attaches keyboard and touch listeners on `open()` and removes them 
 ### Display name derivation
 `slugToName(slug)` converts folder names to display names: hyphens → spaces, title-case each word. Users override this with `meta.json` files. The slug (folder name) is always the canonical identifier used in URLs and API calls; the display name is presentational only.
 
+### Image sizing strategy (shrink-in-place + on-demand grid thumbnails)
+Two-part strategy to keep page loads fast without loading full-resolution DSLR originals for every use:
+- **`content/` originals are working copies, not archival masters.** The deployment this was designed for keeps real backups on a separate NAS, so `scripts/shrink-originals.js` (`npm run shrink`) is allowed to permanently overwrite oversized originals in place, capping the longer edge at `MAX_DISPLAY_DIM` (2560px). This is a manual/rerun-as-needed script, not wired into any request path — run it after adding a batch of large new photos. It auto-orients via EXIF (`sharp().rotate()`) before resizing, skips `.gif` and multi-page (animated webp/avif) files, skips images already at or under the cap, and writes to a temp file + `fs.renameSync` to avoid partial-write corruption.
+- **Small grid/card thumbnails are generated on-demand and cached to disk.** `getGridThumbnail()` in `server.js` lazily resizes (via `sharp`, width `GRID_THUMB_WIDTH` = 480px) the first time a photo is requested through `GET /thumb/grid/*path`, and caches the result to `THUMB_CACHE_ROOT` (`.thumbcache/`, a sibling of `content/`, not inside it — so `getSubdirs`/`getImages`/`findCoverAnywhere` never mistake it for an album/gallery folder). Subsequent requests are served straight from the cache; a source file's `mtime` newer than the cached file's triggers regeneration. `.thumbcache/` is fully disposable — safe to delete anytime, regenerates transparently on next request.
+- Frontend split: card covers and grid thumbnails go through `gridThumbUrl()` in `app.js` (string-swaps `/content/` → `/thumb/grid/`); the lightbox and hero/page background deliberately keep loading the plain `/content/...` URL, since the shrink script already caps that file's size — no separate "display" size tier needed.
+- This is the first code path that writes to disk (both the shrink script and the thumbnail cache) — everything else in the app is read-only. `sharp` (`package.json`) is the project's first dependency beyond `express`; if it fails to load at startup, the server should fail loudly rather than silently falling back to unresized images.
+
 ---
 
 ## API Surface
 
-All endpoints are read-only. The server has no write, upload, or delete routes.
+All endpoints are read-only from the caller's perspective (no upload/delete route exists). `GET /thumb/grid/*path` may write a cached derivative file server-side on first request — see [Image sizing strategy](#image-sizing-strategy-shrink-in-place--on-demand-grid-thumbnails).
 
 | Method | Path | Returns |
 |---|---|---|
 | GET | `/api/browse` | Root browse: `{ title, subtitle, name, year, description, backgroundImage, ancestors: [], folders: Array<{ id, name, year, coverPhoto, folderCount, photoCount }>, photos: string[] }` |
 | GET | `/api/browse/*path` | Same shape as root, for any folder depth under `content/`. `ancestors` contains `{ slug, name }` for each path segment (including current). |
+| GET | `/thumb/grid/*path` | Small resized copy of the photo at `*path` (480px wide), lazily generated and cached to `.thumbcache/`; falls back to the original for GIFs, already-small images, and on any error |
 | — | `/content/...` | Static file serving from `./content/` |
 | — | `/*` | Returns `public/index.html` (SPA catch-all) |
 
@@ -183,6 +195,14 @@ Default port: `3000`. Override: `PORT=8080 npm start`.
 ---
 
 ## Product History
+
+### 2026-08-22 — Faster loading: shrink-in-place + on-demand grid thumbnails
+- Added `sharp` as the project's first non-`express` dependency
+- New `scripts/shrink-originals.js` (`npm run shrink`): manually-run script that permanently shrinks oversized photos in `content/` in place (caps longer edge at 2560px, auto-orients via EXIF, skips GIFs/animated images/already-small files, temp-file+rename write for safety) — acceptable since `content/` is treated as working copies only, with real backups kept on a separate NAS
+- New `GET /thumb/grid/*path` route in `server.js`: lazily generates and disk-caches a 480px-wide thumbnail per photo (`getGridThumbnail()`), served from `.thumbcache/` (a sibling of `content/`, gitignored, fully disposable)
+- Referer-check middleware factored out of the `/content` route into a reusable `refererGuard()` so the new route shares the same protection
+- `app.js` gains `gridThumbUrl()`; card covers and grid thumbnails now request `/thumb/grid/...` instead of the raw original. Lightbox and hero background intentionally still load `/content/...` directly — the shrink script keeps that file small enough already, so no separate "display" size tier was needed
+- Root cause addressed: every image use previously requested the same full-resolution original (DSLR files can be 8-15MB+), even for a ~300px grid thumbnail
 
 ### 2026-06-26 — Hero landing page
 - Home page redesigned as a full-screen hero (100vh) with large title, subtitle, and a clickable hero section that scrolls to the gallery (down-chevron button later replaced with click-anywhere)

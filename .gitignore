@@ -1,6 +1,7 @@
 node_modules/
 content/*
 !content/add_files_here
+.thumbcache/
 .DS_Store
 .env
 .env.local

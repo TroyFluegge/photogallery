@@ -1,11 +1,18 @@
 const express = require('express');
 const fs      = require('fs');
 const path    = require('path');
+const sharp   = require('sharp');
 
 const app         = express();
 const PORT        = process.env.PORT || 3000;
 const PHOTOS_ROOT = path.resolve(__dirname, 'content');
 const IMAGE_EXTS  = new Set(['.jpg', '.jpeg', '.png', '.webp', '.gif', '.avif']);
+
+// Cached resized copies live outside content/ so the directory-walking
+// functions below (which only ever traverse PHOTOS_ROOT) never mistake the
+// cache for an album/gallery folder.
+const THUMB_CACHE_ROOT = path.resolve(__dirname, '.thumbcache');
+const GRID_THUMB_WIDTH = 480;
 
 function slugToName(slug) {
   return slug
@@ -29,6 +36,42 @@ function safePath(...parts) {
     return null;
   }
   return resolved;
+}
+
+function refererGuard(req, res, next) {
+  const referer = req.headers.referer || req.headers.referrer || '';
+  const host    = req.headers.host || '';
+  let allowed = false;
+  if (referer && host) {
+    try { allowed = new URL(referer).host === host; } catch { /* malformed — deny */ }
+  }
+  if (!allowed) return res.status(403).send('Forbidden');
+  next();
+}
+
+// Lazily generates (and disk-caches) a small resized copy of an image for
+// grid/card thumbnails. Falls back to the original for GIFs (preserves
+// animation), already-small images, and any sharp failure.
+async function getGridThumbnail(sourceAbsPath) {
+  if (path.extname(sourceAbsPath).toLowerCase() === '.gif') return sourceAbsPath;
+
+  let srcStat;
+  try { srcStat = fs.statSync(sourceAbsPath); } catch { return sourceAbsPath; }
+
+  let meta;
+  try { meta = await sharp(sourceAbsPath).metadata(); } catch { return sourceAbsPath; }
+  if (meta.width && meta.width <= GRID_THUMB_WIDTH) return sourceAbsPath;
+
+  const relPath    = path.relative(PHOTOS_ROOT, sourceAbsPath);
+  const cachedPath = path.join(THUMB_CACHE_ROOT, relPath);
+
+  try {
+    if (fs.statSync(cachedPath).mtimeMs >= srcStat.mtimeMs) return cachedPath;
+  } catch { /* not cached yet — fall through and generate */ }
+
+  fs.mkdirSync(path.dirname(cachedPath), { recursive: true });
+  await sharp(sourceAbsPath).rotate().resize({ width: GRID_THUMB_WIDTH, withoutEnlargement: true }).toFile(cachedPath);
+  return cachedPath;
 }
 
 function readMeta(dir) {
@@ -140,20 +183,33 @@ app.get('/api/browse',   (_req, res) => handleBrowse('', res));
 app.get('/api/browse/*', (req, res)  => handleBrowse(req.params[0], res));
 
 // Serve content directory — referer guard + no-store cache
-app.use('/content', (req, res, next) => {
-  const referer = req.headers.referer || req.headers.referrer || '';
-  const host    = req.headers.host || '';
-  let allowed = false;
-  if (referer && host) {
-    try { allowed = new URL(referer).host === host; } catch { /* malformed — deny */ }
-  }
-  if (!allowed) return res.status(403).send('Forbidden');
+app.use('/content', refererGuard, (req, res, next) => {
   res.setHeader('Cache-Control', 'public, max-age=2592000');
   next();
 }, express.static(path.join(__dirname, 'content'), {
   index: false,
   dotfiles: 'deny'
 }));
+
+// Lazily-generated, disk-cached small thumbnails for grid/card use.
+app.get('/thumb/grid/*', refererGuard, async (req, res) => {
+  const segments   = req.params[0].split('/').filter(Boolean);
+  const sourcePath = safePath(...segments);
+  if (!sourcePath) return res.status(400).send('Invalid path');
+  if (!fs.existsSync(sourcePath) || !fs.statSync(sourcePath).isFile() ||
+      !IMAGE_EXTS.has(path.extname(sourcePath).toLowerCase())) {
+    return res.status(404).send('Not found');
+  }
+
+  try {
+    const outPath = await getGridThumbnail(sourcePath);
+    res.setHeader('Cache-Control', 'public, max-age=2592000');
+    res.sendFile(outPath);
+  } catch (err) {
+    console.error('Thumbnail generation failed for', sourcePath, err);
+    res.sendFile(sourcePath);
+  }
+});
 
 // Serve frontend
 app.use(express.static(path.join(__dirname, 'public')));

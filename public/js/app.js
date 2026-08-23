@@ -60,6 +60,10 @@ function escapeHtml(str) {
     .replace(/"/g, '&quot;');
 }
 
+function gridThumbUrl(url) {
+  return url ? url.replace('/content/', '/thumb/grid/') : url;
+}
+
 // ─── Router ───────────────────────────────────────────────────────────────────
 
 let currentRenderedPath = null;
@@ -170,7 +174,7 @@ async function renderBrowse(segments) {
             <div class="card${f.coverPhoto === false ? ' card--no-cover' : ''}" role="link" tabindex="0"
                  data-path="${fPath}">
               ${f.coverPhoto
-                ? `<img class="card-cover" src="${f.coverPhoto}" alt="${escapeHtml(f.name)}" loading="lazy">`
+                ? `<img class="card-cover" src="${gridThumbUrl(f.coverPhoto)}" alt="${escapeHtml(f.name)}" loading="lazy">`
                 : f.coverPhoto === false ? ''
                 : `<div class="card-cover"></div>`}
               <div class="card-info">
@@ -189,7 +193,7 @@ async function renderBrowse(segments) {
         ${data.photos.map((url, i) => `
           <img
             class="photo-thumb"
-            src="${url}"
+            src="${gridThumbUrl(url)}"
             alt="Photo ${i + 1} of ${photoCount}"
             loading="lazy"
             draggable="false"

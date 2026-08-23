@@ -13,6 +13,7 @@ A self-hosted photo gallery. Navigate from a home page through albums down to in
   - [Folder Structure](#folder-structure)
   - [Naming Conventions](#naming-conventions)
   - [Supported Image Formats](#supported-image-formats)
+  - [Reducing Photo File Sizes](#reducing-photo-file-sizes)
   - [Display Order](#display-order)
   - [Cover Photos](#cover-photos)
   - [Background Images](#background-images)
@@ -30,7 +31,7 @@ A self-hosted photo gallery. Navigate from a home page through albums down to in
 - **Node.js** v18 or later (v26 recommended; uses `node --watch` for development)
 - **npm** v8 or later (included with Node.js)
 
-No database, no build step, no other runtime dependencies beyond Express.
+No database, no build step. Runtime dependencies: Express and Sharp (for thumbnail generation).
 
 ---
 
@@ -40,9 +41,11 @@ No database, no build step, no other runtime dependencies beyond Express.
 # Clone or download the project, then enter the directory
 cd photo-gallery
 
-# Install the single runtime dependency (Express)
+# Install runtime dependencies (Express, Sharp)
 npm install
 ```
+
+Sharp ships a prebuilt native image-processing binary for common platforms; on an uncommon OS/architecture, `npm install` may need to compile it from source, which takes noticeably longer.
 
 ---
 
@@ -164,6 +167,22 @@ The server recognizes these extensions (case-insensitive):
 Files with any other extension (`.raw`, `.heic`, `.mov`, `.txt`, etc.) are ignored by the API and never listed in the gallery, though they can coexist in the same folder.
 
 > **Tip:** For best web performance, convert phone photos to JPEG or WebP before adding them. HEIC files from iPhones are not displayed — export as JPEG from Photos.app or use a converter.
+
+---
+
+### Reducing Photo File Sizes
+
+The gallery automatically generates and caches small thumbnails for album/gallery cards and the photo grid — no action needed there.
+
+The lightbox and background images, however, load the original file directly. If you're adding photos straight from a DSLR or other high-megapixel camera (often 8-15MB+ per file), run:
+
+```bash
+npm run shrink
+```
+
+This walks `content/` and permanently shrinks any photo larger than 2560px on its longer edge, in place, down to that size — dramatically reducing lightbox load times with no visible quality loss on a typical screen. It's safe to re-run any time; already-small photos are left untouched.
+
+**This permanently overwrites your original files.** Only use this if `content/` holds working copies of your photos and you keep your real backups elsewhere (external drive, NAS, cloud storage, etc.) — if these are your only copies, back them up first.
 
 ---
 
@@ -407,5 +426,5 @@ This gallery is designed for **personal/private use on a trusted network**. Nota
 - **No directory listing:** The static file server has `index: false`, so browsing to `/content/` directly returns a 404 rather than listing files.
 - **Dotfile blocking:** Files starting with `.` (e.g., `.DS_Store`, `.env`) are never served.
 - **No authentication:** There is no login system. If this server is reachable from the internet, anyone with the URL can view all photos. To restrict access, either run it on a private network, add HTTP basic auth in nginx, or use a VPN.
-- **Read-only API:** The server only reads the filesystem — there are no upload, delete, or write endpoints.
+- **Read-only API:** There are no upload or delete endpoints. The one exception is `/thumb/grid/...`, which may write a cached, resized copy of a photo to `.thumbcache/` the first time it's requested — it never modifies files under `content/`.
 - **Download friction:** Several layers discourage casual photo downloading — right-click and drag are blocked on thumbnails; the lightbox renders photos as CSS backgrounds (no "Save image as" on right-click); direct URL access to `/content/...` requires a valid `Referer` header from the gallery itself, so pasting a photo URL into a new tab returns 403. No measure prevents screenshots or DevTools extraction.
